@@ -1,4 +1,4 @@
-# wk
+# wk [![Build Status](https://travis-ci.org/wish/wk.svg?branch=master)](https://travis-ci.org/wish/wk) [![Go Report Card](https://goreportcard.com/badge/github.com/wish/wk)](https://goreportcard.com/report/github.com/wish/wk)
 
 `wk` is an experimental wrapper tool for managing multiple Kubernetes clusters.
 It is planned to cover various Infrastructure as Code tools (backends) to make it as simple as possible to get clusters up and running in seconds.
