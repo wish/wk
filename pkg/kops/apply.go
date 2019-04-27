@@ -26,7 +26,7 @@ spec:
 `
 
 func Apply(ctx context.Context, file string) (err error) {
-	out, err := Edit(ctx, file, "", "")
+	out, raw, err := Edit(ctx, file, "", "")
 	if err != nil {
 		return fmt.Errorf("could not render jsonnet: %v", err)
 	}
@@ -35,7 +35,7 @@ func Apply(ctx context.Context, file string) (err error) {
 	}
 
 	for _, c := range out.Kops.Channels {
-		err := generateChannel(ctx, c, file)
+		err := generateChannel(ctx, c, raw, file)
 		if err != nil {
 			return fmt.Errorf("could not generate channel: %v", err)
 		}
@@ -108,7 +108,7 @@ const extCode = `kops={
   },
 }`
 
-func Edit(ctx context.Context, file, clusterFile, igFile string) (*Cluster, error) {
+func Edit(ctx context.Context, file, clusterFile, igFile string) (*Cluster, []byte, error) {
 	clusterData := ""
 
 	args := []string{}
@@ -117,7 +117,7 @@ func Edit(ctx context.Context, file, clusterFile, igFile string) (*Cluster, erro
 	} else {
 		b, err := ioutil.ReadFile(clusterFile)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		clusterData = string(b)
 	}
@@ -128,7 +128,7 @@ func Edit(ctx context.Context, file, clusterFile, igFile string) (*Cluster, erro
 	} else {
 		b, err := ioutil.ReadFile(igFile)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		igData = string(b)
 	}
@@ -141,11 +141,11 @@ func Edit(ctx context.Context, file, clusterFile, igFile string) (*Cluster, erro
 	c.Stderr = os.Stderr
 	err := c.Run()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// out2 := make(map[string]interface{})
 	out2 := &Cluster{}
 	json.Unmarshal(out.Bytes(), out2)
-	return out2, nil
+	return out2, out.Bytes(), nil
 }

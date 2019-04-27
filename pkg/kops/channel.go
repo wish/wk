@@ -14,7 +14,7 @@ import (
 	"k8s.io/kops/util/pkg/vfs"
 )
 
-func generateChannel(ctx context.Context, c Channel, file string) error {
+func generateChannel(ctx context.Context, c Channel, rawCluster []byte, file string) error {
 	bb := bytes.NewBufferString("std.flattenArrays([\n")
 	for _, a := range c.Apps {
 		switch a.Type {
@@ -29,7 +29,7 @@ func generateChannel(ctx context.Context, c Channel, file string) error {
 	}
 	fmt.Fprintf(bb, "])\n")
 
-	cmd := exec.CommandContext(ctx, "jsonnet", "-y", "--ext-code", "cluster={data:1}", "-")
+	cmd := exec.CommandContext(ctx, "jsonnet", "-y", "--ext-code", "cluster="+string(rawCluster), "-")
 	hashB := bytes.NewBufferString("")
 	cmd.Stdin = bb
 	cmd.Stdout = hashB
