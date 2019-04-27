@@ -40,6 +40,12 @@ func Delete(ctx context.Context, file string) (err error) {
 	if out.Kops == nil {
 		return fmt.Errorf("kops configuration is missing")
 	}
+	for _, c := range out.Kops.Channels {
+		err := deleteChannel(ctx, c)
+		if err != nil {
+			return fmt.Errorf("could not delete channel: %v", err)
+		}
+	}
 
 	kopsEnv := os.Environ()
 	for k, v := range out.Kops.Env {

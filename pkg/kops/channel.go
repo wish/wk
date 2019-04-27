@@ -58,3 +58,18 @@ func generateChannel(ctx context.Context, c Channel, file string) error {
 
 	return nil
 }
+
+func deleteChannel(ctx context.Context, c Channel) error {
+	dest, err := vfs.Context.BuildVfsPath(c.Path)
+	if err != nil {
+		return err
+	}
+	if err := dest.Join(c.Name + ".yaml").Remove(); err != nil {
+		return err
+	}
+	if err := dest.Join(c.Name + ".json").Remove(); err != nil {
+		return err
+	}
+
+	return nil
+}
