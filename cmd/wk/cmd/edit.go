@@ -34,7 +34,7 @@ var editCmd = &cobra.Command{
 		}
 		defer os.Remove(tmpfile) // clean up
 
-		out2, err := kops.Edit(context.Background(), args[0], tmpfile, "")
+		out2, _, err := kops.Edit(context.Background(), args[0], tmpfile, "")
 		if err != nil {
 			panic(err)
 		}
@@ -66,7 +66,7 @@ var editIGCmd = &cobra.Command{
 		}
 		defer os.Remove(tmpfile) // clean up
 
-		out2, err := kops.Edit(context.Background(), args[0], "", tmpfile)
+		out2, _, err := kops.Edit(context.Background(), args[0], "", tmpfile)
 		if err != nil {
 			panic(err)
 		}

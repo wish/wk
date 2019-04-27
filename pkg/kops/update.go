@@ -8,7 +8,7 @@ import (
 )
 
 func Update(ctx context.Context, file string) (err error) {
-	out, err := Edit(ctx, file, "", "")
+	out, _, err := Edit(ctx, file, "", "")
 	if err != nil {
 		return fmt.Errorf("could not render jsonnet: %v", err)
 	}
@@ -33,7 +33,7 @@ func Update(ctx context.Context, file string) (err error) {
 }
 
 func Delete(ctx context.Context, file string) (err error) {
-	out, err := Edit(ctx, file, "", "")
+	out, _, err := Edit(ctx, file, "", "")
 	if err != nil {
 		return fmt.Errorf("could not render jsonnet: %v", err)
 	}
