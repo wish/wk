@@ -15,4 +15,6 @@ vendor
 .terraform
 out
 .channel
-wk
+
+clusters
+release

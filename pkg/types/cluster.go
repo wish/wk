@@ -1,4 +1,4 @@
-package kops
+package types
 
 type Cluster struct {
 	Name string
@@ -20,9 +20,10 @@ type InstanceGroup struct {
 }
 
 type Channel struct {
-	Name string
-	Path string
-	Apps []App
+	Name   string
+	Path   string
+	Apps   []App
+	Folder string
 }
 
 type App struct {

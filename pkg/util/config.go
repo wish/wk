@@ -13,14 +13,20 @@ import (
 // Config contains configuration for given workspace
 type Config struct {
 	ContextDir string
-	ChartsDir  string
+	// ChartsDir  string // TODO(tvi): Fix.
 }
 
 // GetConfig tries to find workspace configuration
-func GetConfig() (*Config, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("could not get wd: %v", err)
+func GetConfig(file string) (*Config, error) {
+	var wd string
+	var err error
+	if file == "" {
+		wd, err = os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("could not get wd: %v", err)
+		}
+	} else {
+		wd = file
 	}
 
 	suffix := []string{".wk.yaml"}
@@ -41,9 +47,9 @@ func GetConfig() (*Config, error) {
 			if err := yaml.Unmarshal(b, c); err != nil {
 				return nil, err
 			}
-			if c.ChartsDir == "" {
-				c.ChartsDir = filepath.Join(filepath.Dir(path), "charts")
-			}
+			// if c.ChartsDir == "" {
+			// 	c.ChartsDir = filepath.Join(filepath.Dir(path), "charts")
+			// }
 			c.ContextDir = filepath.Dir(path)
 
 			return c, nil
@@ -51,5 +57,13 @@ func GetConfig() (*Config, error) {
 
 		suffix = append([]string{".."}, suffix...)
 	}
-	return nil, fmt.Errorf("config file not found")
+	// return nil, fmt.Errorf("config file not found")
+}
+
+func GetContextDir(file string) (string, error) {
+	c, err := GetConfig(file)
+	if err != nil {
+		return "", err
+	}
+	return c.ContextDir, nil
 }

@@ -6,5 +6,5 @@ import (
 )
 
 func TestGetConfig(t *testing.T) {
-	fmt.Println(GetConfig())
+	fmt.Println(GetConfig(""))
 }
