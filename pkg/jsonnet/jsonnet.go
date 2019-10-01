@@ -93,7 +93,7 @@ func ExpandCluster(ctx context.Context, file string) (*types.Cluster, string, er
 
 func ExpandAppFile(ctx context.Context, file, cluster string) (bool, string, string, error) {
 	h, tfile, err := template(ctx, file, []string{
-		"-y", "--ext-code-file", "context=" + cluster,
+		"-y", "--ext-code-file", "cluster=" + cluster,
 	})
 	if err != nil {
 		return false, "", "", err
