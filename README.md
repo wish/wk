@@ -10,5 +10,9 @@ Kops is currently the only supported backend. `wk` wraps around all mostly commo
 
 ### Linux
 
+`go install -v github.com/wish/wk/cmd/wk`
+
 ### MacOS
+
+`go install -v github.com/wish/wk/cmd/wk`
 

@@ -8,9 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sync"
 
 	"github.com/sirupsen/logrus"
+
+	sigs_yaml "sigs.k8s.io/yaml"
 
 	"github.com/wish/wk/pkg/jsonnet"
 	"github.com/wish/wk/pkg/types"
@@ -35,7 +36,7 @@ func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, previe
 		return nil
 	}
 
-	s := &State{UpdateRequired: false}
+	s := newState()
 	sb, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -68,36 +69,29 @@ func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, previe
 		return fmt.Errorf("could not edit cluster: %v", err)
 	}
 
-	// TODO(tvi): Add preview for IGs as well.
-	if preview {
-		return nil
-	}
-
-	// wg := &sync.WaitGroup{}
-	// TODO(tvi): Make concurrent.
+	// This shouldn't be made concurrent, since kops as a tool cannot be run concurrently.
+	// I tried. kops ended up overwriting one instancegroup with another
 	for _, ig := range cluster.Kops.InstanceGroups {
 		logrus.Infoln("Editing instance group:", ig.Name)
 
-		func(ig types.InstanceGroup, wg *sync.WaitGroup) {
+		func(ig types.InstanceGroup) {
+			// TODO(akursell): This is usually pointless
 			igCmd := exec.CommandContext(ctx, "kops", "create", "ig", "--name="+cluster.Name, ig.Name)
-			igCmd.Env = append(kopsEnv, fmt.Sprintf("%v=%v %v %v %v %v %v", "EDITOR", ex, "cluster-edit-ig", file, tfile, statefile, ig.Name))
+			igCmd.Env = append(kopsEnv, fmt.Sprintf("%v=%v %v %v %v %v %v %v", "EDITOR", ex, "cluster-edit-ig", file, tfile, statefile, mode, ig.Name))
 			_ = igCmd.Run()
 
 			igCmd = exec.CommandContext(ctx, "kops", "edit", "ig", "--name="+cluster.Name, ig.Name)
-			igCmd.Env = append(kopsEnv, fmt.Sprintf("%v=%v %v %v %v %v %v", "EDITOR", ex, "cluster-edit-ig", file, tfile, statefile, ig.Name))
+			igCmd.Env = append(kopsEnv, fmt.Sprintf("%v=%v %v %v %v %v %v %v", "EDITOR", ex, "cluster-edit-ig", file, tfile, statefile, mode, ig.Name))
 			igCmd.Stdout, igCmd.Stderr = os.Stdout, os.Stderr
 			err = igCmd.Run()
-
-			// wg.Done()
-		}(ig, nil)
+		}(ig)
 		if err != nil {
 			return err
 		}
 	}
-	// wg.Wait()
 
 	s = getState(statefile)
-	if s.UpdateRequired || forceUpdate {
+	if !preview && (s.requiresUpdate() || forceUpdate) {
 		logrus.Infoln("Update is required. Issuing update.")
 
 		uCmd := exec.CommandContext(ctx, "kops", "update", "cluster", "--name="+cluster.Name, "-v1", "--yes")
@@ -107,7 +101,7 @@ func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, previe
 			return fmt.Errorf("could not update cluster: %v", err)
 		}
 	} else {
-		logrus.Infoln("Update is not required. Skipping.")
+		logrus.Infoln("Not performing update.")
 	}
 
 	return nil
@@ -115,8 +109,6 @@ func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, previe
 
 func ClusterEdit(ctx context.Context, args []string) error {
 	renderedJsonnet, stateFile, mode, outFile := args[1], args[2], args[3], args[4]
-	s := getState(stateFile)
-	defer saveState(s, stateFile)
 
 	cluster, err := ReadClusterFile(renderedJsonnet)
 	if err != nil {
@@ -127,24 +119,43 @@ func ClusterEdit(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	eq, newData, err := patch(data, cluster.Kops.Cluster)
-	if err != nil {
+
+	oldCluster := map[string]interface{}{}
+	if err = sigs_yaml.Unmarshal(data, &oldCluster); err != nil {
 		return err
 	}
+	newCluster := cluster.Kops.Cluster
+
+	// Preserve the timestamps across applications. Otherwise it always shows a diff
+	newCluster["metadata"].(map[string]interface{})["creationTimestamp"] = oldCluster["metadata"].(map[string]interface{})["creationTimestamp"]
+
+	eq, diffText := diff(oldCluster, newCluster)
+	updateState(stateFile, func(s *State) {
+		s.Cluster = ObjectState{
+			UpdateRequired: !eq,
+			DiffText:       diffText,
+		}
+	})
+	if !eq {
+		logrus.Info(diffText)
+	}
+
 	if mode == "preview" {
 		return nil
 	}
+
 	if !eq {
-		ioutil.WriteFile(outFile, newData, os.ModePerm)
-		s.UpdateRequired = true
+		newFileData, err := json.Marshal(newCluster)
+		if err != nil {
+			return err
+		}
+		ioutil.WriteFile(outFile, newFileData, os.ModePerm)
 	}
 	return nil
 }
 
 func ClusterEditIG(ctx context.Context, args []string) error {
-	renderedJsonnet, stateFile, igName, outFile := args[1], args[2], args[3], args[4]
-	s := getState(stateFile)
-	defer saveState(s, stateFile)
+	renderedJsonnet, stateFile, mode, igName, outFile := args[1], args[2], args[3], args[4], args[5]
 
 	cluster, err := ReadClusterFile(renderedJsonnet)
 	if err != nil {
@@ -162,13 +173,33 @@ func ClusterEditIG(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	eq, newData, err := patch(data, ptch)
-	if err != nil {
+	oldIG := map[string]interface{}{}
+	if err = sigs_yaml.Unmarshal(data, &oldIG); err != nil {
 		return err
 	}
+	// Preserve the timestamps across applications. Otherwise it always shows a diff
+	ptch["metadata"].(map[string]interface{})["creationTimestamp"] = oldIG["metadata"].(map[string]interface{})["creationTimestamp"]
+
+	eq, diffText := diff(oldIG, ptch)
+	updateState(stateFile, func(s *State) {
+		s.InstanceGroups[igName] = ObjectState{
+			UpdateRequired: !eq,
+			DiffText:       diffText,
+		}
+	})
 	if !eq {
-		ioutil.WriteFile(outFile, newData, os.ModePerm)
-		s.UpdateRequired = true
+		logrus.Info(diffText)
+	}
+	if mode == "preview" {
+		return nil
+	}
+
+	if !eq {
+		newFileData, err := json.Marshal(ptch)
+		if err != nil {
+			return err
+		}
+		ioutil.WriteFile(outFile, newFileData, os.ModePerm)
 	}
 
 	return nil

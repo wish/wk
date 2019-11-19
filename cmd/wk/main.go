@@ -77,7 +77,7 @@ var clusterEditCmd = &cobra.Command{
 var clusterEditIGCmd = &cobra.Command{
 	Use:    "cluster-edit-ig",
 	Hidden: true,
-	Args:   cobra.ExactArgs(5),
+	Args:   cobra.ExactArgs(6),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := kops.ClusterEditIG(context.Background(), args); err != nil {
 			fmt.Fprintln(os.Stderr, err)
