@@ -30,10 +30,8 @@ func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, previe
 		if err := os.MkdirAll(filepath.Dir(dryFile), os.ModePerm); err != nil {
 			return err
 		}
-		if err := os.Rename(tfile, dryFile); err != nil {
-			return err
-		}
-		return nil
+
+		return CopyFile(tfile, dryFile)
 	}
 
 	s := newState()
