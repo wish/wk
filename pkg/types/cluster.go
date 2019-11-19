@@ -20,10 +20,11 @@ type InstanceGroup struct {
 }
 
 type Channel struct {
-	Name   string
-	Path   string
-	Apps   []App
-	Folder string
+	Name                string
+	Path                string
+	Apps                []App
+	Folder              string
+	FileWhitelistRegexp *string
 }
 
 type App struct {
