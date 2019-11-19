@@ -11,6 +11,6 @@ RUN go mod download
 COPY . /go/src/github.com/wish/wk
 RUN CGO_ENABLED=0 GOOS=linux go build -o /wk -a -installsuffix cgo ./cmd/wk
 
-FROM quay.io/wish/jsonnet-builder:v0.13.0
+FROM quay.io/wish/jsonnet-builder:v0.14.0
 WORKDIR /
 COPY --from=0 /wk /bin/wk
