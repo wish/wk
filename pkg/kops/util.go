@@ -2,7 +2,9 @@ package kops
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 
@@ -12,6 +14,23 @@ import (
 	"github.com/wish/wk/pkg/types"
 	"github.com/wish/wk/pkg/util"
 )
+
+func CopyFile(src, dest string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	return err
+}
 
 func ReadClusterFile(path string) (*types.Cluster, error) {
 	out, err := ioutil.ReadFile(path)

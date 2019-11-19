@@ -88,7 +88,7 @@ func ChannelsApply(ctx context.Context, file, dryFile string) error {
 							if err2 := os.MkdirAll(filepath.Dir(tfile), os.ModePerm); err2 != nil {
 								err = err2
 							}
-							if err2 := os.Rename(outFile, tfile); err2 != nil {
+							if err2 := CopyFile(outFile, tfile); err2 != nil {
 								err = err2
 							}
 							chItems = append(chItems, channelItem{
