@@ -56,6 +56,7 @@ func ChannelsApply(ctx context.Context, file, dryFile string) error {
 		return fmt.Errorf("kops configuration is missing")
 	}
 
+	chItemsMu := sync.Mutex{}
 	chItems := channelItems{}
 
 	for _, channel := range cluster.Kops.Channels {
@@ -91,9 +92,11 @@ func ChannelsApply(ctx context.Context, file, dryFile string) error {
 							if err2 := os.Rename(outFile, tfile); err2 != nil {
 								err = err2
 							}
+							chItemsMu.Lock()
 							chItems = append(chItems, channelItem{
 								strings.ReplaceAll(path[len(fold)+1:], ".jsonnet", ".json"), hsh,
 							})
+							chItemsMu.Unlock()
 						}
 					}
 					wg.Done()
