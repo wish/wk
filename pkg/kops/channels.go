@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -59,11 +60,21 @@ func ChannelsApply(ctx context.Context, file, dryFile string) error {
 	chItems := channelItems{}
 
 	for _, channel := range cluster.Kops.Channels {
+		var regex *regexp.Regexp
+		if channel.FileWhitelistRegexp != nil {
+			regex, err = regexp.Compile(*channel.FileWhitelistRegexp)
+			if err != nil {
+				return err
+			}
+		} else {
+			regex = regexp.MustCompile("\\.jsonnet$")
+		}
+
 		if channel.Folder != "" {
 			fold := filepath.Join(ctxDir, channel.Folder)
 			files := []string{}
 			if err = filepath.Walk(fold, func(path string, info os.FileInfo, err error) error {
-				if strings.HasSuffix(path, ".jsonnet") {
+				if regex.Match([]byte(path)) {
 					files = append(files, path)
 				}
 				return nil
