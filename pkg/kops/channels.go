@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/wish/wk/pkg/jsonnet"
+	"github.com/wish/wk/pkg/opa"
 	"github.com/wish/wk/pkg/util"
 	_ "k8s.io/kops/util/pkg/vfs"
 )
@@ -28,6 +29,23 @@ func (a channelItems) Len() int           { return len(a) }
 func (a channelItems) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a channelItems) Less(i, j int) bool { return a[i].path < a[j].path }
 
+type errors struct {
+	inner []error
+	mu    sync.Mutex
+}
+
+func (e *errors) Add(err error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.inner = append(e.inner, err)
+}
+
+func (e *errors) Get() []error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.inner
+}
+
 const channelPrefix = `kind: Addons
 metadata:
   creationTimestamp: null
@@ -42,7 +60,7 @@ const addonStr = `     - manifest: %v
        id: %v
 `
 
-func ChannelsApply(ctx context.Context, file, dryFile string) error {
+func ChannelsApply(ctx context.Context, file, dryFile string, opaQuery *opa.OPA) error {
 	conf, err := util.GetConfig(file)
 	if err != nil {
 		return err
@@ -59,6 +77,11 @@ func ChannelsApply(ctx context.Context, file, dryFile string) error {
 
 	chItemsMu := sync.Mutex{}
 	chItems := channelItems{}
+
+	errors := errors{
+		inner: make([]error, 0),
+		mu:    sync.Mutex{},
+	}
 
 	for _, channel := range cluster.Kops.Channels {
 		var regex *regexp.Regexp
@@ -83,14 +106,29 @@ func ChannelsApply(ctx context.Context, file, dryFile string) error {
 				return err
 			}
 
-			var err error
 			wg := &sync.WaitGroup{}
 			for _, path := range files {
 				wg.Add(1)
 				go func(path string, wg *sync.WaitGroup) {
+					defer wg.Done()
 					empty, outFile, hsh, err2 := jsonnet.ExpandAppFile(ctx, path, file)
 					if err2 != nil {
-						err = err2
+						errors.Add(err2)
+						return
+					}
+
+					if !empty && opaQuery != nil {
+						accepted, issues, err2 := opaQuery.RunFile(outFile)
+						if err2 != nil {
+							errors.Add(err2)
+							return
+						}
+						if !accepted {
+							for _, issue := range issues {
+								errors.Add(fmt.Errorf("Issue with file %v: %v", path, issue))
+							}
+							return
+						}
 					}
 
 					if !empty {
@@ -98,10 +136,12 @@ func ChannelsApply(ctx context.Context, file, dryFile string) error {
 							tfile := filepath.Join(dryFile, path[len(fold):])
 							tfile = strings.ReplaceAll(tfile, ".jsonnet", ".json")
 							if err2 := os.MkdirAll(filepath.Dir(tfile), os.ModePerm); err2 != nil {
-								err = err2
+								errors.Add(err2)
+								return
 							}
 							if err2 := CopyFile(outFile, tfile); err2 != nil {
-								err = err2
+								errors.Add(err2)
+								return
 							}
 							chItemsMu.Lock()
 							chItems = append(chItems, channelItem{
@@ -110,12 +150,16 @@ func ChannelsApply(ctx context.Context, file, dryFile string) error {
 							chItemsMu.Unlock()
 						}
 					}
-					wg.Done()
 				}(path, wg)
 			}
 			wg.Wait()
-			if err != nil {
-				return err
+			errs := errors.Get()
+			if len(errs) > 0 {
+				for _, err := range errs {
+					fmt.Printf("%v\n", err)
+
+				}
+				return fmt.Errorf("%v errors encountered compiling channel %v", len(errs), channel.Name)
 			}
 		} else {
 			// TODO(tvi): Add more supported types.

@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/wish/wk/pkg/kops"
+	"github.com/wish/wk/pkg/opa"
 )
 
 func init() {
@@ -20,10 +21,13 @@ func init() {
 	clusterApplyCmd.Flags().BoolP("force-update", "f", false, "Force update")
 	clusterApplyCmd.Flags().BoolP("preview", "p", false, "Preview changes")
 
+	opa.AddOPAOpts(clusterApplyCmd)
+
 	rootCmd.AddCommand(clusterEditCmd)
 	rootCmd.AddCommand(clusterEditIGCmd)
 	rootCmd.AddCommand(channelsApplyCmd)
 	channelsApplyCmd.Flags().StringP("dry", "", "", "Run dry run and save output file.")
+	opa.AddOPAOpts(channelsApplyCmd)
 }
 
 var BuildSha = "BuildSha UN-SET"   // BuildSha set default value
@@ -54,8 +58,13 @@ var clusterApplyCmd = &cobra.Command{
 		dry, _ := cmd.Flags().GetString("dry")
 		forceUpdate, _ := cmd.Flags().GetBool("force-update")
 		preview, _ := cmd.Flags().GetBool("preview")
+		opaQuery, err := opa.FromFlags(cmd.Flags())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 
-		if err := kops.ClusterApply(context.Background(), args[0], dry, forceUpdate, preview); err != nil {
+		if err := kops.ClusterApply(context.Background(), args[0], dry, forceUpdate, preview, opaQuery); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
@@ -92,8 +101,13 @@ var channelsApplyCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		dry, _ := cmd.Flags().GetString("dry")
+		opaQuery, err := opa.FromFlags(cmd.Flags())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 		dry = filepath.Clean(dry)
-		if err := kops.ChannelsApply(context.Background(), args[0], dry); err != nil {
+		if err := kops.ChannelsApply(context.Background(), args[0], dry, opaQuery); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
