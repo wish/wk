@@ -14,15 +14,31 @@ import (
 	sigs_yaml "sigs.k8s.io/yaml"
 
 	"github.com/wish/wk/pkg/jsonnet"
+	"github.com/wish/wk/pkg/opa"
 	"github.com/wish/wk/pkg/types"
 	"github.com/wish/wk/pkg/util"
 )
 
-func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, preview bool) error {
+func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, preview bool, opaQuery *opa.OPA) error {
 	cluster, tfile, err := jsonnet.ExpandCluster(ctx, file)
 	if err != nil {
 		return err
 	}
+
+	if opaQuery != nil {
+		logrus.Infof("Running OPA query")
+		accepted, issues, err2 := opaQuery.RunFile(tfile)
+		if err2 != nil {
+			return err2
+		}
+		if !accepted {
+			for _, issue := range issues {
+				logrus.Errorf(issue)
+			}
+			return fmt.Errorf("Cluster failed OPA validation")
+		}
+	}
+
 	if cluster.Kops == nil {
 		return fmt.Errorf("kops configuration is missing")
 	}
