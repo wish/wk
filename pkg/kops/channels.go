@@ -77,6 +77,7 @@ func ChannelsApply(ctx context.Context, file, dryFile string, opaQuery *opa.OPA)
 
 	chItemsMu := sync.Mutex{}
 	chItems := channelItems{}
+	mkdirMu := sync.Mutex{}
 
 	errors := errors{
 		inner: make([]error, 0),
@@ -135,10 +136,13 @@ func ChannelsApply(ctx context.Context, file, dryFile string, opaQuery *opa.OPA)
 						if dryFile != "" {
 							tfile := filepath.Join(dryFile, path[len(fold):])
 							tfile = strings.ReplaceAll(tfile, ".jsonnet", ".json")
+							mkdirMu.Lock()
 							if err2 := os.MkdirAll(filepath.Dir(tfile), os.ModePerm); err2 != nil {
 								errors.Add(err2)
+								mkdirMu.Unlock()
 								return
 							}
+							mkdirMu.Unlock()
 							if err2 := CopyFile(outFile, tfile); err2 != nil {
 								errors.Add(err2)
 								return
