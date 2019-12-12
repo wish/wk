@@ -26,7 +26,6 @@ func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, previe
 	}
 
 	if opaQuery != nil {
-		logrus.Infof("Running OPA query")
 		accepted, issues, err2 := opaQuery.RunFile(tfile)
 		if err2 != nil {
 			return err2
@@ -140,8 +139,13 @@ func ClusterEdit(ctx context.Context, args []string) error {
 	}
 	newCluster := cluster.Kops.Cluster
 
-	// Preserve the timestamps across applications. Otherwise it always shows a diff
-	newCluster["metadata"].(map[string]interface{})["creationTimestamp"] = oldCluster["metadata"].(map[string]interface{})["creationTimestamp"]
+	// Preserve the timestamps and resource generation across applications. Otherwise it always shows a diff
+	if oldTime, ok := oldCluster["metadata"].(map[string]interface{})["creationTimestamp"]; ok {
+		newCluster["metadata"].(map[string]interface{})["creationTimestamp"] = oldTime
+	}
+	if oldGen, ok := oldCluster["metadata"].(map[string]interface{})["generation"]; ok {
+		newCluster["metadata"].(map[string]interface{})["generation"] = oldGen
+	}
 
 	eq, diffText := diff(oldCluster, newCluster)
 	updateState(stateFile, func(s *State) {
@@ -191,8 +195,13 @@ func ClusterEditIG(ctx context.Context, args []string) error {
 	if err = sigs_yaml.Unmarshal(data, &oldIG); err != nil {
 		return err
 	}
-	// Preserve the timestamps across applications. Otherwise it always shows a diff
-	ptch["metadata"].(map[string]interface{})["creationTimestamp"] = oldIG["metadata"].(map[string]interface{})["creationTimestamp"]
+	// Preserve the timestamps and resource generation across applications. Otherwise it always shows a diff
+	if oldTime, ok := oldIG["metadata"].(map[string]interface{})["creationTimestamp"]; ok {
+		ptch["metadata"].(map[string]interface{})["creationTimestamp"] = oldTime
+	}
+	if oldGen, ok := oldIG["metadata"].(map[string]interface{})["generation"]; ok {
+		ptch["metadata"].(map[string]interface{})["generation"] = oldGen
+	}
 
 	eq, diffText := diff(oldIG, ptch)
 	updateState(stateFile, func(s *State) {
