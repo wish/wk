@@ -10,7 +10,6 @@ require (
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190424031112-b9b92a825806 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
-	github.com/imdario/mergo v0.3.7
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0
 	github.com/open-policy-agent/opa v0.15.1
@@ -28,7 +27,6 @@ require (
 	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7 // indirect
 	google.golang.org/grpc v1.20.1 // indirect
 	gopkg.in/ini.v1 v1.46.0 // indirect
-	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/apimachinery v0.0.0-20190424132444-f1e86e15343c // indirect
 	k8s.io/client-go v11.0.0+incompatible // indirect
 	k8s.io/kops v1.11.1-0.20190301151100-0f2aa8d30d89
