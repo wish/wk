@@ -107,7 +107,7 @@ func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, previe
 	if !preview && (s.requiresUpdate() || forceUpdate) {
 		logrus.Infoln("Update is required. Issuing update.")
 
-		uCmd := exec.CommandContext(ctx, "kops", "update", "cluster", "--name="+cluster.Name, "-v1", "--yes")
+		uCmd := exec.CommandContext(ctx, "kops", "update", "cluster", "--name="+cluster.Name, "-v1", "--yes", "--create-kube-config=false")
 		uCmd.Stdout, uCmd.Stderr = os.Stdout, os.Stderr
 		uCmd.Env = kopsEnv
 		if err = uCmd.Run(); err != nil {
