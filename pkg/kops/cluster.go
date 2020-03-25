@@ -91,7 +91,10 @@ func ClusterApply(ctx context.Context, file, dryFile string, forceUpdate, previe
 			// TODO(akursell): This is usually pointless
 			igCmd := exec.CommandContext(ctx, "kops", "create", "ig", "--name="+cluster.Name, ig.Name)
 			igCmd.Env = append(kopsEnv, fmt.Sprintf("%v=%v %v %v %v %v %v %v", "EDITOR", ex, "cluster-edit-ig", file, tfile, statefile, mode, ig.Name))
-			_ = igCmd.Run()
+			createErr := igCmd.Run()
+			if createErr == nil {
+				s.Cluster.UpdateRequired = true
+			}
 
 			igCmd = exec.CommandContext(ctx, "kops", "edit", "ig", "--name="+cluster.Name, ig.Name)
 			igCmd.Env = append(kopsEnv, fmt.Sprintf("%v=%v %v %v %v %v %v %v", "EDITOR", ex, "cluster-edit-ig", file, tfile, statefile, mode, ig.Name))
