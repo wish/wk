@@ -62,6 +62,7 @@ func template(ctx context.Context, file string, extraArgs []string) ([]byte, str
 	extraArgs = append(extraArgs, []string{
 		"--ext-code", exttCode,
 		"--ext-code", getEnv(),
+		"--ext-code", "wk=true",
 		"-J", ctxDir,
 		"-o", tfile,
 		file,
