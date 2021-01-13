@@ -20,6 +20,7 @@ func init() {
 	clusterApplyCmd.Flags().StringP("dry", "", "", "Run dry run and save output file.")
 	clusterApplyCmd.Flags().BoolP("force-update", "f", false, "Force update")
 	clusterApplyCmd.Flags().BoolP("preview", "p", false, "Preview changes")
+	clusterApplyCmd.Flags().BoolP("no-update", "n", false, "Create resources but don't do kops update cluster")
 
 	opa.AddOPAOpts(clusterApplyCmd)
 
@@ -58,13 +59,14 @@ var clusterApplyCmd = &cobra.Command{
 		dry, _ := cmd.Flags().GetString("dry")
 		forceUpdate, _ := cmd.Flags().GetBool("force-update")
 		preview, _ := cmd.Flags().GetBool("preview")
+		noUpdate, _ := cmd.Flags().GetBool("no-update")
 		opaQuery, err := opa.FromFlags(cmd.Flags())
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 
-		if err := kops.ClusterApply(context.Background(), args[0], dry, forceUpdate, preview, opaQuery); err != nil {
+		if err := kops.ClusterApply(context.Background(), args[0], dry, forceUpdate, noUpdate, preview, opaQuery); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
