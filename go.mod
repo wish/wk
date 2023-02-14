@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	cloud.google.com/go v0.37.4 // indirect
-	github.com/aws/aws-sdk-go v1.19.16 // indirect
+	github.com/aws/aws-sdk-go v1.34.0 // indirect
 	github.com/denverdino/aliyungo v0.0.0-20190410085603-611ead8a6fed // indirect
 	github.com/go-ini/ini v1.42.0 // indirect
 	github.com/golang/protobuf v1.3.1 // indirect
