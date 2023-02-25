@@ -27,7 +27,7 @@ require (
 	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7 // indirect
 	google.golang.org/grpc v1.20.1 // indirect
 	gopkg.in/ini.v1 v1.46.0 // indirect
-	k8s.io/apimachinery v0.0.0-20190424132444-f1e86e15343c // indirect
+	k8s.io/apimachinery v0.15.7 // indirect
 	k8s.io/client-go v11.0.0+incompatible // indirect
 	k8s.io/kops v1.11.1-0.20190301151100-0f2aa8d30d89
 	sigs.k8s.io/yaml v1.1.0
